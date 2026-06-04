@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Verix — Agent 经济的信誉基础设施</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-root: #051424;
+    --amber: #ffb95f;
+    --blue-core: #abc7ff;
+    --blue-deep: #003c7e;
+    --text-primary: #d4e4fa;
+    --text-dim: #94A3B8;
+    --text-on-surface-variant: #c3c6d2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    background: var(--bg-root);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    -webkit-font-smoothing: antialiased;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── Background layers ── */
+  .bg-noise {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+  .bg-grid {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(171,199,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(171,199,255,0.025) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .bg-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 55% 45% at 50% 40%, rgba(0,60,126,0.18) 0%, transparent 70%);
+  }
+
+  /* ════════════════ SPLASH SCREEN (ported from demo2 app/page.tsx) ════════════════ */
+  .splash-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: #051424;
+    display: flex; flex-direction: column;
+    transition: opacity 0.55s cubic-bezier(0.4,0,0.2,1),
+                transform 0.55s cubic-bezier(0.4,0,0.2,1),
+                filter 0.55s cubic-bezier(0.4,0,0.2,1);
+  }
+  .splash-overlay.exiting {
+    opacity: 0; transform: scale(1.04); filter: blur(8px);
+    pointer-events: none;
+  }
+
+  .splash-bg-img {
+    position: absolute; inset: 0;
+    background: url('verix-landing-bg.jpg') center/cover no-repeat;
+    opacity: 0.55;
+  }
+  .splash-overlays {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(1,15,31,0.45) 0%, rgba(5,20,36,0.3) 44%, rgba(1,15,31,0.65) 100%),
+      radial-gradient(circle at center, rgba(171,199,255,0.06) 0%, rgba(5,20,36,0.1) 34%, rgba(1,15,31,0.5) 100%);
+  }
+  .splash-grid {
+    position: absolute; inset: 0; opacity: 0.12;
+    background-image:
+      linear-gradient(rgba(171,199,255,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(171,199,255,0.08) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Top nav inside splash */
+  .splash-nav {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px; padding: 0 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(5,20,36,0.4);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+  .splash-nav-brand {
+    font: 700 18px/1 'Geist', sans-serif;
+    color: var(--blue-core);
+    letter-spacing: -0.01em;
+  }
+  .splash-nav-links { display: flex; gap: 24px; }
+  .splash-nav-links span {
+    font: 600 12px/16px 'Geist', sans-serif;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--text-on-surface-variant);
+    cursor: default;
+  }
+  .splash-nav-enter {
+    font: 600 12px/16px 'Geist', sans-serif;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    background: #003C7E; color: #D7E3FF;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+    padding: 8px 20px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,60,126,0.35);
+    transition: all 0.3s ease;
+  }
+  .splash-nav-enter:hover {
+    transform: translateY(-1px);
+    background: #134688;
+  }
+
+  /* Main content area */
+  .splash-main {
+    position: relative; z-index: 2; flex: 1;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 0 24px;
+  }
+  .splash-center {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding-top: 80px;
+  }
+
+  /* Staggered entrance keyframes */
+  @keyframes splashLogoIn {
+    0%   { opacity: 0; transform: scale(0.82) translateY(12px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes splashFadeUp {
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes splashBtnIn {
+    0%   { opacity: 0; transform: scale(0.94) translateY(12px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes splashCardIn {
+    0%   { opacity: 0; transform: translateY(18px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .splash-logo-wrap {
+    position: relative; margin-bottom: 28px;
+    opacity: 0; animation: splashLogoIn 0.7s cubic-bezier(0.34,1.4,0.64,1) 0.15s forwards;
+  }
+  .splash-logo-glow {
+    position: absolute; inset: -20%;
+    border-radius: 50%;
+    background: rgba(255,185,95,0.2);
+    filter: blur(40px);
+  }
+  .splash-logo-img {
+    position: relative;
+    width: 96px; height: 96px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+    object-fit: cover;
+  }
+
+  .splash-title {
+    font: 700 44px/52px 'Geist', sans-serif;
+    letter-spacing: -0.02em;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(171,199,255,0.4);
+    opacity: 0; animation: splashFadeUp 0.5s ease 0.75s forwards;
+  }
+  .splash-subtitle {
+    margin-top: 6px;
+    font: 300 20px/28px 'Geist', sans-serif;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    opacity: 0; animation: splashFadeUp 0.5s ease 0.9s forwards;
+  }
+  .splash-tagline-wrap {
+    margin-top: 18px; height: 28px; overflow: hidden; width: 100%; max-width: 360px;
+    position: relative;
+  }
+  .splash-tagline {
+    position: absolute; width: 100%; left: 0;
+    font: 300 20px/28px 'Geist', sans-serif;
+    letter-spacing: 0.05em;
+    color: var(--text-on-surface-variant);
+    transition: transform 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.45s cubic-bezier(0.4,0,0.2,1);
+  }
+  .splash-tagline.current {
+    opacity: 1; transform: translateY(0);
+  }
+  .splash-tagline.exit-up {
+    opacity: 0; transform: translateY(-20px);
+  }
+  .splash-tagline.enter-below {
+    opacity: 0; transform: translateY(20px);
+  }
+
+  .splash-enter-btn {
+    margin-top: 28px;
+    position: relative; overflow: hidden;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 36px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(90deg, #003C7E, #1A237E);
+    color: #fff;
+    font: 600 12px/16px 'Geist', sans-serif;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    box-shadow: 0 0 24px rgba(0,60,126,0.28);
+    cursor: pointer;
+    opacity: 0; animation: splashBtnIn 0.6s cubic-bezier(0.34,1.4,0.64,1) 1.25s forwards;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .splash-enter-btn:hover {
+    transform: scale(1.04) translateY(-2px);
+    box-shadow: 0 0 32px rgba(0,60,126,0.4);
+  }
+  .splash-enter-btn:active { transform: scale(0.98); }
+  .splash-enter-btn .gloss {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 1s ease;
+  }
+  .splash-enter-btn:hover .gloss { transform: translateX(100%); }
+
+  .splash-enter-arrow {
+    display: inline-block; transition: transform 0.3s ease;
+  }
+  .splash-enter-btn:hover .splash-enter-arrow { transform: translateX(4px); }
+
+  /* Feature cards row */
+  .splash-cards {
+    position: relative; z-index: 2;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; padding-bottom: 28px; max-width: 1100px; margin: 0 auto; width: 100%;
+  }
+  .splash-card {
+    position: relative; overflow: hidden;
+    border-radius: 16px; padding: 24px;
+    cursor: default;
+    opacity: 0;
+  }
+  .splash-card:nth-child(1) { animation: splashCardIn 0.55s ease 1.45s forwards; }
+  .splash-card:nth-child(2) { animation: splashCardIn 0.55s ease 1.57s forwards; }
+  .splash-card:nth-child(3) { animation: splashCardIn 0.55s ease 1.69s forwards; }
+
+  .splash-card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: #273647; border: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .splash-card-icon svg { width: 20px; height: 20px; color: var(--blue-core); stroke-width: 1.8; }
+  .splash-card h3 {
+    font: 500 18px/24px 'Geist', sans-serif;
+    color: var(--text-primary); margin-bottom: 8px;
+  }
+  .splash-card p {
+    font: 400 14px/22px 'Geist', sans-serif;
+    color: rgba(195,198,210,0.8);
+  }
+
+  @media (max-width: 768px) {
+    .splash-cards { grid-template-columns: 1fr; }
+    .splash-title { font-size: 32px; line-height: 40px; }
+    .splash-subtitle { font-size: 16px; letter-spacing: 0.1em; }
+    .splash-tagline { font-size: 17px; }
+    .splash-logo-img { width: 72px; height: 72px; }
+    .splash-nav-links { display: none; }
+    .splash-main { padding: 0 16px; }
+    .splash-card { padding: 18px; }
+  }
+
+  /* ── Glass panel ── */
+  .glass-panel {
+    background: rgba(5, 20, 36, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-radius: 16px;
+  }
+
+  .light-leak-top {
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,185,95,0.5), transparent);
+    opacity: 0; transition: opacity 0.3s ease;
+    border-radius: 16px 16px 0 0; pointer-events: none;
+  }
+  .feature-card:hover .light-leak-top { opacity: 1; }
+
+  .spring-hover {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .spring-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0,0,0,0.5), 0 0 0 1px rgba(171,199,255,0.12);
+  }
+
+  /* ── Typography ── */
+  .display-lg  { font: 700 48px/56px 'Geist', sans-serif; letter-spacing: -0.02em; }
+  .headline-lg { font: 600 32px/40px 'Geist', sans-serif; letter-spacing: -0.01em; }
+  .title-md    { font: 500 20px/28px 'Geist', sans-serif; }
+  .body-md     { font: 400 16px/24px 'Geist', sans-serif; }
+  .label-caps  { font: 600 12px/16px 'Geist', sans-serif; letter-spacing: 0.05em; text-transform: uppercase; }
+  .num-gradient {
+    font-family: 'Geist Mono', monospace; font-weight: 500;
+    background: linear-gradient(180deg, #ffffff 0%, #abc7ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .text-glow-blue  { text-shadow: 0 0 32px rgba(171,199,255,0.45); }
+  .text-glow-amber { text-shadow: 0 0 24px rgba(255,185,95,0.35); }
+
+  .accent-rule {
+    width: 48px; height: 2px;
+    background: linear-gradient(90deg, var(--amber), transparent);
+    border-radius: 2px;
+  }
+
+  /* ── Slides ── */
+  .slides-container {
+    position: fixed; inset: 0; z-index: 10;
+    width: 100%; height: 100%;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 80px 24px 40px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .slide.active {
+    opacity: 1; pointer-events: auto;
+  }
+
+  .slide-inner {
+    width: 100%; max-width: 1100px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+
+  /* ── Slide entry animation ── */
+  .slide.active .anim-up {
+    animation: slideUp 0.7s cubic-bezier(0.22,0.61,0.36,1) forwards;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide .anim-up { opacity: 0; transform: translateY(40px); }
+
+  /* ── Top Nav Bar ── */
+  .topnav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    background: rgba(5,20,36,0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .topnav-brand {
+    font: 700 18px/1 'Geist', sans-serif;
+    color: var(--blue-core);
+    letter-spacing: -0.01em;
+  }
+  .topnav-links {
+    display: flex; gap: 4px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px; padding: 3px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .topnav-link {
+    padding: 6px 16px;
+    border-radius: 8px;
+    font: 500 13px/1 'Geist', sans-serif;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    border: none; background: none;
+    letter-spacing: 0.01em;
+  }
+  .topnav-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+  }
+  .topnav-link.active {
+    color: #fff;
+    background: rgba(0,60,126,0.45);
+    box-shadow: 0 0 0 1px rgba(171,199,255,0.15);
+  }
+  .topnav-back {
+    font: 500 13px/1 'Geist', sans-serif;
+    color: var(--text-dim);
+    background: none; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .topnav-back:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* ── Slide indicator dots (bottom) ── */
+  .slide-dots {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; gap: 8px;
+  }
+  .slide-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  .slide-dot.active {
+    background: var(--blue-core);
+    box-shadow: 0 0 12px rgba(171,199,255,0.5);
+    transform: scale(1.3);
+  }
+
+  /* ── Data card popup ── */
+  .data-card {
+    cursor: pointer;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow 0.5s ease,
+                z-index 0s step-end;
+    position: relative; z-index: 1;
+  }
+  .data-card.expanded {
+    transform: scale(1.25) !important;
+    z-index: 30 !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(171,199,255,0.25) !important;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow 0.5s ease,
+                z-index 0s step-start;
+  }
+  .data-card.expanded.spring-hover:hover {
+    transform: scale(1.25) !important;
+  }
+
+  /* ── TrustCurve ── */
+  .tc-path {
+    stroke-dasharray: 1200; stroke-dashoffset: 1200;
+    transition: stroke-dashoffset 3.2s cubic-bezier(0.22,0.61,0.36,1);
+  }
+  .slide.active .tc-path { stroke-dashoffset: 0; }
+
+  /* ── Placeholder ── */
+  .placeholder-frame {
+    border: 2px dashed rgba(171,199,255,0.18); border-radius: 16px;
+    background: rgba(0,60,126,0.05);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: all 0.3s ease; cursor: default;
+  }
+  .placeholder-frame:hover {
+    border-color: rgba(171,199,255,0.4);
+    background: rgba(0,60,126,0.1);
+  }
+
+  .tl-node {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--blue-core);
+    box-shadow: 0 0 16px rgba(171,199,255,0.4);
+    flex-shrink: 0; position: relative; z-index: 1;
+  }
+
+  .pulse-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 8px var(--amber);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+  }
+
+  ::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 768px) {
+    .display-lg { font-size: 30px; line-height: 38px; }
+    .headline-lg { font-size: 22px; line-height: 30px; }
+    .body-md { font-size: 14px; line-height: 21px; }
+    .title-md { font-size: 17px; line-height: 24px; }
+    .topnav { padding: 0 14px; height: 48px; }
+    .topnav-link { padding: 5px 10px; font-size: 11px; }
+    .slide { padding: 64px 16px 32px; }
+  }
+</style>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: {
+  colors: {
+    'vx-amber':'#ffb95f','vx-blue':'#abc7ff','vx-deep':'#003c7e',
+    'vx-bg':'#051424','vx-dim':'#94A3B8'
+  },
+  fontFamily: { 'sans':['Geist','system-ui','sans-serif'], 'mono':['Geist Mono','monospace'] }
+}}}
+</script>
+</head>
+<body>
+
+<!-- Backgrounds -->
+<div class="bg-noise"></div>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- ════════════════ SPLASH OVERLAY (demo2 landing page) ════════════════ -->
+<div class="splash-overlay" id="splash">
+  <div class="splash-bg-img"></div>
+  <div class="splash-overlays"></div>
+  <div class="splash-grid"></div>
+
+  <!-- Top nav -->
+  <nav class="splash-nav">
+    <span class="splash-nav-brand">Verix</span>
+    <button class="splash-nav-enter" onclick="exitSplash()">Launch Portal</button>
+  </nav>
+
+  <!-- Center content -->
+  <div class="splash-main">
+    <div class="splash-center">
+      <!-- Logo -->
+      <div class="splash-logo-wrap">
+        <img src="verix-logo-mark.png" alt="Verix" class="splash-logo-img" />
+      </div>
+
+      <!-- Brand name -->
+      <h1 class="splash-title">Verix</h1>
+
+      <!-- Subtitle -->
+      <p class="splash-subtitle">AGENT 经济的信任层基础设施</p>
+
+      <!-- Rotating tagline (demo2 AnimatePresence scroll) -->
+      <div class="splash-tagline-wrap">
+        <div class="splash-tagline current" id="tlCurrent">让信任可验证</div>
+        <div class="splash-tagline enter-below" id="tlNext">让协作可生长</div>
+      </div>
+
+      <!-- Enter button -->
+      <button class="splash-enter-btn" onclick="exitSplash()">
+        <span class="gloss"></span>
+        进入演示
+        <span class="splash-enter-arrow" style="font-size:16px">&#8594;</span>
+      </button>
+    </div>
+
+    <!-- Feature cards -->
+    <div class="splash-cards">
+      <div class="splash-card feature-card glass-panel">
+        <div class="light-leak-top"></div>
+        <div class="splash-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>可验证信誉</h3>
+        <p>基于可追溯交付记录构建信任链，让每个 Agent 的履约能力清晰可证。</p>
+      </div>
+      <div class="splash-card feature-card glass-panel">
+        <div class="light-leak-top"></div>
+        <div class="splash-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>平台兜底</h3>
+        <p>押金、裁定与合约机制内置到协作流程，降低企业采购 Agent 的不确定性。</p>
+      </div>
+      <div class="splash-card feature-card glass-panel">
+        <div class="light-leak-top"></div>
+        <div class="splash-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>自进化引擎</h3>
+        <p>持续沉淀信誉数据与风险反馈，推动 Agent 生态越协作越可靠。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ Top Nav ════════════ -->
+<nav class="topnav">
+  <span class="topnav-brand">Verix</span>
+  <div class="topnav-links">
+    <button class="topnav-link active" data-slide="0">现状</button>
+    <button class="topnav-link" data-slide="1">困境</button>
+    <button class="topnav-link" data-slide="2">方案</button>
+    <button class="topnav-link" data-slide="3">团队</button>
+    <button class="topnav-link" data-slide="4">下一步</button>
+    <button class="topnav-link" data-slide="5" style="display:none"></button>
+  </div>
+  <button class="topnav-back" onclick="resetSplash()" title="返回启动页">&#8592; 返回</button>
+</nav>
+
+<!-- ════════════ Bottom Dots ════════════ -->
+<div class="slide-dots">
+  <span class="slide-dot active" data-slide="0"></span>
+  <span class="slide-dot" data-slide="1"></span>
+  <span class="slide-dot" data-slide="2"></span>
+  <span class="slide-dot" data-slide="3"></span>
+  <span class="slide-dot" data-slide="4"></span>
+  <span class="slide-dot" data-slide="5"></span>
+</div>
+
+<!-- ════════════ Slides Container ════════════ -->
+<div class="slides-container" id="slidesContainer">
+
+  <!-- ──── Slide 0: HERO / 现状 ──── -->
+  <div class="slide active" data-index="0" style="background: url('market-bg.jpg') center/cover no-repeat">
+    <div style="position:absolute;inset:0;background:rgba(5,20,36,0.7)"></div>
+    <div class="slide-inner" style="position:relative;z-index:1">
+      <div class="flex flex-col gap-8">
+        <!-- 4 data cards full width -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.2s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">Agent 部署增速</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">135%</p>
+            <p class="text-xs text-vx-dim leading-relaxed">中国 AI Agent 部署 CAGR，全球领跑</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">IDC FutureScape 2026.3</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.25s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">企业落地现实</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">4%</p>
+            <p class="text-xs text-vx-dim leading-relaxed">实现变革性 AI 落地的企业占比</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">港大-德勤 AI 采用指数 2026</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.3s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">MuleRun 用户规模</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">21万+</p>
+            <p class="text-xs text-vx-dim leading-relaxed">AI Agent 市场，覆盖 43 国，千个 Agent 上架</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">阿里云峰会 2026.5</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.35s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">Copilot 阶段占比</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">95%</p>
+            <p class="text-xs text-vx-dim leading-relaxed">企业仍在 Copilot 阶段，AI 仅承担约 20% 工作量</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">阿里云峰会 2026.5</p>
+          </div>
+        </div>
+
+        <!-- Second row: 4 more data cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.4s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">AI Native 效率差</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">×10</p>
+            <p class="text-xs text-vx-dim leading-relaxed">AI Native 团队与 Copilot 团队的效率差距</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">阿里云峰会 2026.5</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.45s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">试点到规模的鸿沟</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">56%</p>
+            <p class="text-xs text-vx-dim leading-relaxed">企业处于"有限实施"状态，仅获得局部收益</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">港大-德勤 AI 采用指数 2026</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.5s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">AI 自由职业者</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">280-550万</p>
+            <p class="text-xs text-vx-dim leading-relaxed">中国具备 AI 交付能力的独立自由职业者，年增 30-50 万</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">国家统计局 / MBO Partners / Caixin</p>
+          </div>
+          <div class="data-card feature-card glass-panel p-5 relative overflow-hidden spring-hover anim-up" style="animation-delay:0.55s" onclick="toggleCard(this)">
+            <div class="light-leak-top"></div>
+            <p class="label-caps text-vx-dim mb-2 tracking-wider text-[10px]">转型窗口期</p>
+            <p class="text-4xl font-bold num-gradient mb-1.5" style="font-size:36px">18月</p>
+            <p class="text-xs text-vx-dim leading-relaxed">企业 AI Native 转型窗口期仅剩 18 个月</p>
+            <p class="text-[10px] font-mono text-white/15 mt-2">阿里云峰会 2026.5</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom narration -->
+      <div class="anim-up grid grid-cols-1 md:grid-cols-2 gap-6 mt-8" style="animation-delay:0.6s">
+        <p class="body-md text-vx-dim leading-relaxed text-sm">
+          今年 3 月，<span class="text-white font-medium">MuleRun</span> 在旧金山开了一场游艇发布会——数十万用户，上千个 Agent 上架，AI 服务的淘宝化看起来已经落地。但同月<span class="text-white font-medium">阿里云峰会</span>的数字没有变：九成企业还在 Copilot 阶段，真正落地 AI 的只有 4%。
+        </p>
+        <p class="body-md text-vx-dim leading-relaxed text-sm">
+          从 IDC 135% 的增速到港大德勤 4% 的落地率，这道鸿沟不是模型能力的问题。AI 试点已经泛滥，但从试点到规模化之间，卡着一个被所有人看见但没人愿意解决的环节——<span class="text-white font-medium">企业不知道怎么安全地采购、整合、复用 AI 服务。</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── Slide 1: 困境 ──── -->
+  <div class="slide" data-index="1">
+    <div class="slide-inner">
+      <div class="anim-up mb-8" style="animation-delay:0.05s">
+        <div class="accent-rule mb-3"></div>
+        <p class="label-caps text-vx-dim mb-2 tracking-[0.2em] text-[11px]">Section 02</p>
+        <h2 class="headline-lg text-white max-w-2xl leading-tight">
+          Marketplace 的盲点：<br>搜索成本被解决，沉没成本无人兜底
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div class="space-y-6">
+          <div class="anim-up space-y-4" style="animation-delay:0.1s">
+            <h3 class="title-md text-white flex items-center gap-2">
+              <span class="font-mono text-base" style="color:var(--amber)">01</span> 企业害怕的不是"找不到"
+            </h3>
+            <p class="body-md text-vx-dim leading-relaxed text-sm">
+              我们访谈了三十多个用 AI 接单的独立开发者、十几家想用 AI 的中小企业，答案很清楚。Coze、千帆、百炼这些平台解决了<span class="text-white">搜索成本</span>。但企业真正害怕的是<span class="font-medium" style="color:var(--amber)">沉没成本</span>：花了钱、交了数据、结果不可控、出了问题没人兜底。
+            </p>
+            <div class="glass-panel p-4 space-y-2" style="border-radius:12px">
+              <div class="flex items-start gap-2">
+                <span class="font-mono text-xs shrink-0 mt-0.5" style="color:var(--amber)">¥</span>
+                <p class="text-xs text-vx-dim"><span class="text-white text-xs font-medium">错误采购的真实成本</span>——电商短视频做错重做 5k-20k 元只是显性损失，错过活动档期和流量窗口才是真正的代价。</p>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="font-mono text-xs shrink-0 mt-0.5" style="color:var(--amber)">!</span>
+                <p class="text-xs text-vx-dim"><span class="text-white text-xs font-medium">数据泄露与合规追责</span>——企业把财务、客户、供应链数据交给外部 AI 服务时，一旦泄露，追责链条模糊，企业自身首当其冲承担法律后果。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="anim-up space-y-2" style="animation-delay:0.2s">
+            <h3 class="title-md text-white flex items-center gap-2">
+              <span class="font-mono text-base" style="color:var(--amber)">02</span> 供给侧同样痛苦
+            </h3>
+            <p class="body-md text-vx-dim leading-relaxed text-sm">
+              开发者的交付能力散落在私域——朋友圈、微信群、个人推荐。一个运营者做过 100 单，好评无法迁移到任何新场景。能力锁在客户关系里，无法验证、复用、放大。
+            </p>
+          </div>
+        </div>
+
+        <div class="anim-up space-y-6" style="animation-delay:0.15s">
+          <div class="glass-panel p-6 space-y-4" style="border-radius:16px">
+            <h4 class="text-white font-semibold text-sm label-caps tracking-wider">三个结构性盲点</h4>
+            <div class="space-y-3">
+              <div class="flex gap-3">
+                <div class="w-1 shrink-0 rounded-full" style="background:linear-gradient(180deg, var(--amber), transparent)"></div>
+                <div>
+                  <p class="text-white text-sm font-medium mb-0.5">撮合解决"搜索"，不解决"沉没"</p>
+                  <p class="text-xs text-vx-dim leading-relaxed">找到了人也解决不了出事谁负责。平台不对交付结果承担任何责任。</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="w-1 shrink-0 rounded-full" style="background:linear-gradient(180deg, var(--amber), transparent)"></div>
+                <div>
+                  <p class="text-white text-sm font-medium mb-0.5">链上无许可信誉路径已被证伪</p>
+                  <p class="text-xs text-vx-dim leading-relaxed">ERC-8004：9 个钱包制造 19,792 条 Sybil 标记。链上不可篡改 ≠ 上链前数据真实。Agent 进入商业行为，需要严格的、与人类的身份锚定。</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="w-1 shrink-0 rounded-full" style="background:linear-gradient(180deg, var(--amber), transparent)"></div>
+                <div>
+                  <p class="text-white text-sm font-medium mb-0.5">大模型厂商不会下场做这件事</p>
+                  <p class="text-xs text-vx-dim leading-relaxed">卖云、卖模型、卖平台占满注意力。深入垂类、要求中立性、重运营低毛利的"脏活"是大厂结构性不愿做的事。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-panel p-5 border-l-2" style="border-left-color:var(--amber); border-radius:12px">
+            <p class="text-white font-medium text-sm mb-1.5">核心矛盾</p>
+            <p class="text-xs text-vx-dim leading-relaxed">
+              大厂越积极推 Agent 平台，MuleRun 越把 Agent marketplace 做大，信任缺失的漏洞就越大。<span class="text-white">它们让 Agent 可以被买到，但买到的 Agent 能不能被信任——这个问题没有人解决。</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── Slide 2: 方案 ──── -->
+  <div class="slide" data-index="2">
+    <div class="slide-inner">
+      <div class="anim-up mb-8" style="animation-delay:0.05s">
+        <div class="accent-rule mb-3"></div>
+        <p class="label-caps text-vx-dim mb-2 tracking-[0.2em] text-[11px]">Section 03</p>
+        <h2 class="headline-lg text-white max-w-2xl leading-tight">
+          Verix 的策略：把信任封装成可交付的基础设施
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="anim-up feature-card glass-panel p-6 relative overflow-hidden spring-hover" style="animation-delay:0.1s">
+          <div class="light-leak-top"></div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style="background:rgba(0,60,126,0.3); border:1px solid rgba(255,255,255,0.06)">
+            <span class="font-mono text-sm text-glow-blue">01</span>
+          </div>
+          <h3 class="text-white font-semibold text-sm mb-2 title-md">标准化服务包</h3>
+          <p class="text-xs text-vx-dim leading-relaxed mb-3">
+            标准定义 + 运营者绑定 + 有赔付有验收清单 + 风控评估插件 + 隔离执行环境。企业购买有边界、有保障、可预期的服务单元。
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">交付确定性</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">验收清单</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">有赔付</span>
+          </div>
+        </div>
+
+        <div class="anim-up feature-card glass-panel p-6 relative overflow-hidden spring-hover" style="animation-delay:0.15s">
+          <div class="light-leak-top"></div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style="background:rgba(0,60,126,0.3); border:1px solid rgba(255,255,255,0.06)">
+            <span class="font-mono text-sm text-glow-blue">02</span>
+          </div>
+          <h3 class="text-white font-semibold text-sm mb-2 title-md">自研信誉引擎</h3>
+          <p class="text-xs text-vx-dim leading-relaxed mb-3">
+            全链路内置自研信誉引擎，每一次真实交付自动沉淀结构化评估元数据——对企业是采购确定性，对开发者是可携带的数字信用资产。
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">TrustCurve</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">非对称衰减</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">自进化</span>
+          </div>
+        </div>
+
+        <div class="anim-up feature-card glass-panel p-6 relative overflow-hidden spring-hover" style="animation-delay:0.2s">
+          <div class="light-leak-top"></div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style="background:rgba(0,60,126,0.3); border:1px solid rgba(255,255,255,0.06)">
+            <span class="font-mono text-sm text-glow-blue">03</span>
+          </div>
+          <h3 class="text-white font-semibold text-sm mb-2 title-md">终态：通用审计 Agent</h3>
+          <p class="text-xs text-vx-dim leading-relaxed mb-3">
+            风控保障安全的同时采集脱敏元数据，真实交付语料训练出通用审计 Agent——业务本身就是终态产品的数据来源，两件事合二为一。
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(255,185,95,0.15); color:var(--amber)">终态产品</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(0,60,126,0.25); color:rgba(171,199,255,0.8)">审计 Agent</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TrustCurve + Demo -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="anim-up glass-panel p-6 flex flex-col" style="animation-delay:0.3s; border-radius:16px">
+          <h4 class="label-caps text-white mb-4 tracking-wider text-[11px]">信誉引擎可视化 — TrustCurve</h4>
+          <svg class="w-full" viewBox="0 0 400 180" preserveAspectRatio="xMidYMid meet" style="min-height:160px">
+            <defs>
+              <linearGradient id="tcFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#abc7ff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#abc7ff" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="glowLine">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <line x1="0" y1="135" x2="400" y2="135" stroke="rgba(255,255,255,0.04)"/>
+            <line x1="0" y1="90"  x2="400" y2="90"  stroke="rgba(255,255,255,0.04)"/>
+            <line x1="0" y1="45"  x2="400" y2="45"  stroke="rgba(255,255,255,0.04)"/>
+            <path d="M0,170 L0,130 Q60,134 120,112 T240,85 T360,63 T400,50 L400,170 Z" fill="url(#tcFill)"/>
+            <path d="M0,130 Q60,134 120,112 T240,85 T360,63 T400,50" fill="none" stroke="#abc7ff" stroke-width="2.5" filter="url(#glowLine)" class="tc-path" id="tc-good"/>
+            <path d="M0,130 Q60,134 120,136 T240,145 T360,150 T400,148" fill="none" stroke="rgba(255,185,95,0.5)" stroke-width="1.5" class="tc-path" id="tc-bad"/>
+            <text x="388" y="46" fill="#abc7ff" font-size="8" font-family="Geist Mono" text-anchor="end">可靠 Agent</text>
+            <text x="388" y="155" fill="rgba(255,185,95,0.5)" font-size="8" font-family="Geist Mono" text-anchor="end">异常模式</text>
+            <text x="10" y="14" fill="rgba(255,255,255,0.2)" font-size="7" font-family="Geist Mono">信誉分数</text>
+            <text x="380" y="175" fill="rgba(255,255,255,0.15)" font-size="7" font-family="Geist Mono">时间 →</text>
+          </svg>
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(171,199,255,0.08); color:rgba(171,199,255,0.7)">联邦信誉学习 + 差分隐私</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(171,199,255,0.08); color:rgba(171,199,255,0.7)">因果推理评估</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(171,199,255,0.08); color:rgba(171,199,255,0.7)">机制设计博弈论</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(171,199,255,0.08); color:rgba(171,199,255,0.7)">时间动力学建模</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(171,199,255,0.08); color:rgba(171,199,255,0.7)">跨场景迁移学习</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md" style="background:rgba(255,185,95,0.12); color:var(--amber)">通用审计 Agent</span>
+          </div>
+        </div>
+
+        <div class="anim-up" style="animation-delay:0.35s">
+          <div class="glass-panel overflow-hidden h-full flex" style="border-radius:16px">
+            <video src="5月27日.mp4" controls class="w-full" style="display:block; object-fit:contain; min-height:200px"></video>
+          </div>
+          <p class="text-[10px] text-white/10 font-mono mt-2 text-center">Demo 演示：服务包采购 → 信誉引擎实时评估 → 交付验收</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── Slide 3: 团队 ──── -->
+  <div class="slide" data-index="3">
+    <div class="slide-inner">
+      <div class="anim-up mb-8" style="animation-delay:0.05s">
+        <div class="accent-rule mb-3"></div>
+        <p class="label-caps text-vx-dim mb-2 tracking-[0.2em] text-[11px]">Section 04</p>
+        <h2 class="headline-lg text-white max-w-2xl leading-tight">
+          为什么是我们：跨界团队 × 学界验证 × 先发优势
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        <!-- Team -->
+        <div class="anim-up lg:col-span-2 feature-card glass-panel p-6 relative overflow-hidden" style="animation-delay:0.1s">
+          <div class="light-leak-top"></div>
+          <h3 class="text-white font-semibold text-sm mb-4 title-md">跨界团队背景</h3>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <div class="w-2 h-2 rounded-full shrink-0" style="background:rgba(171,199,255,0.5)"></div>
+              <div><p class="text-white text-sm font-medium">自动化</p><p class="text-xs text-vx-dim">信誉引擎核心工程与系统设计</p></div>
+            </div>
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <div class="w-2 h-2 rounded-full shrink-0" style="background:rgba(171,199,255,0.5)"></div>
+              <div><p class="text-white text-sm font-medium">区块链</p><p class="text-xs text-vx-dim">去中心化信誉模型与机制设计</p></div>
+            </div>
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <div class="w-2 h-2 rounded-full shrink-0" style="background:rgba(171,199,255,0.5)"></div>
+              <div><p class="text-white text-sm font-medium">金融</p><p class="text-xs text-vx-dim">风控逻辑、押金机制与合规架构</p></div>
+            </div>
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <div class="w-2 h-2 rounded-full shrink-0" style="background:rgba(171,199,255,0.5)"></div>
+              <div><p class="text-white text-sm font-medium">新闻传播</p><p class="text-xs text-vx-dim">对外叙事、生态建设与品牌策略</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metrics + academic -->
+        <div class="anim-up lg:col-span-3 space-y-4" style="animation-delay:0.15s">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="glass-panel p-5 spring-hover" style="border-radius:12px">
+              <p class="text-3xl font-bold num-gradient mb-1">10+</p>
+              <p class="text-xs text-vx-dim">已触达中小企业<br><span class="text-[10px]" style="color:var(--amber)">电商 / 制造 / 金融供应链 / 广告传媒</span></p>
+            </div>
+            <div class="glass-panel p-5 spring-hover" style="border-radius:12px">
+              <p class="text-3xl font-bold num-gradient mb-1">15-30</p>
+              <p class="text-xs text-vx-dim">首批认证开发者<br><span class="text-[10px]" style="color:var(--amber)">FDE 与独立 Agent 运营者社区</span></p>
+            </div>
+            <div class="glass-panel p-5 spring-hover" style="border-radius:12px">
+              <p class="text-3xl font-bold num-gradient mb-1">3 个月</p>
+              <p class="text-xs text-vx-dim">从零到社区筹备<br><span class="text-[10px]" style="color:var(--amber)">触达、认证、签约全流程</span></p>
+            </div>
+          </div>
+
+          <div class="glass-panel p-6" style="border-radius:16px">
+            <h4 class="label-caps text-white mb-4 tracking-wider text-[11px]">学界理论研究已同步验证</h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2.5">
+                <div class="flex items-start gap-1.5">
+                  <span class="font-mono text-xs mt-0.5 shrink-0" style="color:var(--blue-core)">&#10003;</span>
+                  <div>
+                    <p class="text-white text-xs font-medium mb-0.5">NTNU 学术参照</p>
+                    <p class="text-[11px] text-vx-dim leading-relaxed">Chishti et al. (2026.4, arXiv:2605.00073) 提出"信任三难""上下文坍塌""验证强度"——Verix 在工程化深度上领先。</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-1.5">
+                  <span class="font-mono text-xs mt-0.5 shrink-0" style="color:var(--amber)">&#10003;</span>
+                  <div>
+                    <p class="text-white text-xs font-medium mb-0.5" style="color:var(--amber)">已与挪威科技大学课题组达成合作共识</p>
+                    <p class="text-[11px] text-vx-dim leading-relaxed">FSE 2026 收录，技术路线与学界最新研究同步推进。</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-1.5">
+                  <span class="font-mono text-xs mt-0.5 shrink-0" style="color:var(--blue-core)">&#10003;</span>
+                  <div>
+                    <p class="text-white text-xs font-medium mb-0.5">五大开放问题全覆盖</p>
+                    <p class="text-[11px] text-vx-dim leading-relaxed">隐私权衡 / 对抗复杂性 / 冷启动 / 强度量化 / 制度本体论——Verix 五章七方向全部覆盖。</p>
+                  </div>
+                </div>
+              </div>
+              <a href="https://arxiv.org/abs/2605.00073" target="_blank" class="glass-panel p-4 flex flex-col gap-2 hover:border-vx-blue/30 transition-all duration-300" style="border-radius:12px; border:1px solid rgba(171,199,255,0.1); text-decoration:none; min-height:110px">
+                <p class="text-white text-xs font-medium leading-snug">AgentReputation: A Decentralized Agentic AI Reputation Framework</p>
+                <p class="text-[10px] text-vx-dim">Chishti, Oyinloye & Li — NTNU</p>
+                <p class="text-[10px]" style="color:var(--amber)">FSE 2026 · IVR Track</p>
+                <p class="text-[10px] font-mono text-white/20 mt-auto">arXiv:2605.00073 · 点击查看</p>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Moats -->
+      <div class="anim-up mt-5 grid grid-cols-1 md:grid-cols-3 gap-4" style="animation-delay:0.3s">
+        <div class="feature-card glass-panel p-5 relative overflow-hidden spring-hover">
+          <div class="light-leak-top"></div>
+          <p class="font-mono text-[10px] mb-1.5 tracking-wider" style="color:var(--amber)">01</p>
+          <p class="text-white font-medium text-sm mb-1.5">数据源不可复制</p>
+          <p class="text-xs text-vx-dim leading-relaxed">只有同时控制"服务包封装、真实交付、反馈回流"三环才能产生这类数据。大厂、撮合平台、链上方案各自只有一块碎片。</p>
+        </div>
+        <div class="feature-card glass-panel p-5 relative overflow-hidden spring-hover">
+          <div class="light-leak-top"></div>
+          <p class="font-mono text-[10px] mb-1.5 tracking-wider" style="color:var(--amber)">02</p>
+          <p class="text-white font-medium text-sm mb-1.5">做大厂不愿做的细分垂类</p>
+          <p class="text-xs text-vx-dim leading-relaxed">深入数据敏感、合规要求高、重运营低毛利的场景——这些是大厂 KPI 和架构天然排斥的，却是 Verix 封装包架构的主战场。</p>
+        </div>
+        <div class="feature-card glass-panel p-5 relative overflow-hidden spring-hover">
+          <div class="light-leak-top"></div>
+          <p class="font-mono text-[10px] mb-1.5 tracking-wider" style="color:var(--amber)">03</p>
+          <p class="text-white font-medium text-sm mb-1.5">大厂越强，Verix 越受益</p>
+          <p class="text-xs text-vx-dim leading-relaxed">大模型越发展，能力越强、越好用，企业对 AI 服务的接受度越高、理解门槛越低——采购需求持续放大。MuleRun 越多 Agent，Verix 信誉层的服务对象池越大。大厂花预算教育市场，Verix 自然承接被教育后的采购决策。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── Slide 4: 过渡页 ──── -->
+  <div class="slide" data-index="4" style="background: url('interstitial-bg.jpg') center/cover no-repeat">
+    <div style="position:absolute;inset:0;background:rgba(5,20,36,0.65);backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px)"></div>
+    <div class="slide-inner flex flex-col items-center text-center justify-center gap-10" style="position:relative;z-index:1">
+      <div class="anim-up space-y-8" style="animation-delay:0.1s">
+        <p class="headline-lg text-white leading-snug max-w-2xl" style="font-size:36px; line-height:1.4; text-shadow: 0 4px 32px rgba(0,0,0,0.6)">
+          以上，是我们两个月内做到的，<br>那么未来——
+        </p>
+      </div>
+      <div class="anim-up" style="animation-delay:0.5s">
+        <button class="splash-enter-btn" onclick="window.goTo(5)" style="font-size:14px; padding:16px 48px;">
+          <span class="gloss"></span>
+          继续
+          <span class="splash-enter-arrow" style="font-size:18px">&#8594;</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── Slide 5: 下一步 ──── -->
+  <div class="slide" data-index="5" style="background: url('next-bg.jpg') center/cover no-repeat">
+    <div style="position:absolute;inset:0;background:rgba(5,20,36,0.45)"></div>
+    <div class="slide-inner" style="position:relative;z-index:1">
+      <div class="anim-up mb-8" style="animation-delay:0.05s">
+        <div class="accent-rule mb-3"></div>
+        <p class="label-caps text-vx-dim mb-2 tracking-[0.2em] text-[11px]">Section 05</p>
+        <h2 class="headline-lg text-white max-w-2xl leading-tight">
+          下一步：三个月最小闭环，建成受信开发者生态
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <!-- Timeline -->
+        <div class="anim-up space-y-6" style="animation-delay:0.1s">
+          <div class="flex gap-3">
+            <div class="flex flex-col items-center">
+              <div class="tl-node"></div>
+              <div class="w-px flex-1 mt-1" style="background:linear-gradient(180deg, rgba(171,199,255,0.3), transparent)"></div>
+            </div>
+            <div class="pb-6">
+              <span class="font-mono text-[10px] tracking-wider" style="color:var(--amber)">0-3 个月</span>
+              <h4 class="text-white font-semibold mt-1 text-sm">首批客户最小闭环验证</h4>
+              <p class="text-xs leading-relaxed mt-1.5" style="color:rgba(255,255,255,0.6)">
+                平台上线，企业正式签约。完成首批 PoC 客户完整交付链路——服务包下单 → 信誉数据回传 → 企业验收 → 运营者评价沉淀。验证的是"服务包 + 信誉引擎 + 数据隔离"组合在 B 端市场的有效性。
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="flex flex-col items-center">
+              <div class="tl-node"></div>
+              <div class="w-px flex-1 mt-1" style="background:linear-gradient(180deg, rgba(171,199,255,0.3), transparent)"></div>
+            </div>
+            <div class="pb-6">
+              <span class="font-mono text-[10px] tracking-wider" style="color:var(--amber)">3-6 个月</span>
+              <h4 class="text-white font-semibold mt-1 text-sm">建成受信开发者生态</h4>
+              <p class="text-xs leading-relaxed mt-1.5" style="color:rgba(255,255,255,0.6)">
+                15-30 人认证开发者社区入驻。信誉引擎完成首批真实交付数据训练。金融供应链 → 跨境电商横向场景复制启动，天使轮同步推进。
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="flex flex-col items-center"><div class="tl-node"></div></div>
+            <div>
+              <span class="font-mono text-[10px] tracking-wider" style="color:var(--amber)">6-12 个月</span>
+              <h4 class="text-white font-semibold mt-1 text-sm">信誉 API 公测 + 跨垂直扩张</h4>
+              <p class="text-xs leading-relaxed mt-1.5" style="color:rgba(255,255,255,0.6)">
+                5-10 家锚定客户，3-5 个服务包。信誉 API 开放第一批外部调用方接入。信誉数据积累密度成为后来者难以追赶的核心壁垒。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Milestones + closing -->
+        <div class="anim-up space-y-5" style="animation-delay:0.2s">
+          <div class="glass-panel p-6 space-y-3" style="border-radius:16px; background:rgba(5,20,36,0.18)">
+            <h4 class="label-caps text-white mb-1 tracking-wider text-[11px]">关键里程碑</h4>
+            <div class="flex justify-between items-center"><span class="text-xs text-vx-dim">客户触达</span><span class="text-lg font-bold num-gradient">10+ 家</span></div>
+            <div class="w-full h-px bg-white/[0.04]"></div>
+            <div class="flex justify-between items-center"><span class="text-xs text-vx-dim">认证开发者社区</span><span class="text-lg font-bold num-gradient">15-30 人</span></div>
+            <div class="w-full h-px bg-white/[0.04]"></div>
+            <div class="flex justify-between items-center"><span class="text-xs text-vx-dim">目标 GMV（V1）</span><span class="text-lg font-bold num-gradient">200-500 万</span></div>
+            <div class="w-full h-px bg-white/[0.04]"></div>
+            <div class="flex justify-between items-center"><span class="text-xs text-vx-dim">预计真实交付记录</span><span class="text-lg font-bold num-gradient">2,000-5,000 条</span></div>
+            <div class="w-full h-px bg-white/[0.04]"></div>
+            <div class="flex justify-between items-center"><span class="text-xs text-vx-dim">天使轮目标</span><span class="text-lg font-bold num-gradient">500-1,000 万</span></div>
+          </div>
+
+          <div class="glass-panel p-6 border-l-2" style="border-left-color:var(--amber); border-radius:12px; background:rgba(5,20,36,0.18)">
+            <p class="text-white font-semibold text-base mb-2.5 leading-relaxed">
+              Agent 经济的爆发节点已经到来，信誉层是缺失的最后一块拼图。
+            </p>
+            <p class="text-xs text-vx-dim leading-relaxed">
+              Verix 不做另一个撮合平台。在所有人都在卖铲子的地方，我们做那个验证铲子能不能挖出金子的角色。不需要打败巨头——在他们还没看清之前，把"信任数据"做成中国市场最权威的那一份。
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides-container -->
+
+<script>
+/* ── Splash tagline rotation (demo2 AnimatePresence scroll) ── */
+(function() {
+  var taglines = ['让信任可验证', '让协作可生长'];
+  var idx = 0;
+  var cur = document.getElementById('tlCurrent');
+  var nxt = document.getElementById('tlNext');
+  if (!cur || !nxt) return;
+
+  setInterval(function() {
+    idx = (idx + 1) % taglines.length;
+    // Current exits upward, next enters from below up to center
+    cur.className = 'splash-tagline exit-up';
+    nxt.textContent = taglines[idx];
+    nxt.className = 'splash-tagline current';
+    // After animation, swap references
+    setTimeout(function() {
+      var tmp = cur; cur = nxt; nxt = tmp;
+      nxt.className = 'splash-tagline enter-below';
+      nxt.textContent = taglines[(idx + 1) % taglines.length];
+    }, 480);
+  }, 3200);
+})();
+
+/* ── Splash exit (matches demo2: blur+scale+fade → navigate) ── */
+function exitSplash() {
+  var splash = document.getElementById('splash');
+  if (!splash || splash.classList.contains('exiting')) return;
+  splash.classList.add('exiting');
+  setTimeout(function() {
+    splash.style.display = 'none';
+  }, 580);
+}
+
+/* ── Reset back to splash ── */
+function resetSplash() {
+  var splash = document.getElementById('splash');
+  if (!splash) return;
+  var cur = document.getElementById('tlCurrent');
+  var nxt = document.getElementById('tlNext');
+  if (cur && nxt) {
+    cur.className = 'splash-tagline current';
+    cur.textContent = '让信任可验证';
+    nxt.className = 'splash-tagline enter-below';
+    nxt.textContent = '让协作可生长';
+  }
+  splash.classList.remove('exiting');
+  splash.style.display = '';
+  if (window.goTo) window.goTo(0);
+}
+
+(function() {
+  var current = 0;
+  var total = 6;
+  var slides = document.querySelectorAll('.slide');
+  var navLinks = document.querySelectorAll('.topnav-link');
+  var dots = document.querySelectorAll('.slide-dot');
+
+  function goTo(index) {
+    if (index < 0 || index >= total) return;
+    current = index;
+    slides.forEach(function(s, i) {
+      s.classList.toggle('active', i === current);
+    });
+    navLinks.forEach(function(l, i) {
+      l.classList.toggle('active', i === current);
+    });
+    dots.forEach(function(d, i) {
+      d.classList.toggle('active', i === current);
+    });
+
+    var activeSlide = slides[current];
+    var paths = activeSlide.querySelectorAll('.tc-path');
+    paths.forEach(function(p) {
+      p.classList.remove('tc-path');
+      void p.offsetWidth;
+      p.classList.add('tc-path');
+    });
+
+    // Strip anim-up after entrance completes so transitions work
+    setTimeout(function() {
+      activeSlide.querySelectorAll('.anim-up').forEach(function(el) {
+        el.classList.remove('anim-up');
+      });
+    }, 1200);
+  }
+
+  // Also handle the initial slide (0) on first load
+  setTimeout(function() {
+    var s = document.querySelector('.slide.active');
+    if (s) {
+      s.querySelectorAll('.anim-up').forEach(function(el) {
+        el.classList.remove('anim-up');
+      });
+    }
+  }, 1200);
+
+  // Expose goTo globally for resetSplash
+  window.goTo = goTo;
+
+  // Nav clicks
+  navLinks.forEach(function(link) {
+    link.addEventListener('click', function() {
+      goTo(parseInt(link.getAttribute('data-slide')));
+    });
+  });
+
+  // Dot clicks
+  dots.forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      goTo(parseInt(dot.getAttribute('data-slide')));
+    });
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goTo(current - 1); }
+  });
+
+  // Touch swipe
+  var touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  });
+  document.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0) goTo(current + 1);
+      else goTo(current - 1);
+    }
+  });
+})();
+
+/* ── Data card popup toggle ── */
+var expandedCard = null;
+
+function toggleCard(card) {
+  if (card === expandedCard) {
+    card.classList.remove('expanded');
+    expandedCard = null;
+  } else {
+    if (expandedCard) expandedCard.classList.remove('expanded');
+    card.classList.add('expanded');
+    expandedCard = card;
+  }
+}
+</script>
+</body>
+</html>
